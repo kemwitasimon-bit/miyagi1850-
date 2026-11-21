@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finest Meals - Food Ordering</title>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial;background:#f5f5f5;color:#222}
+header{background:#176b45;color:white;text-align:center;padding:20px}
+nav{background:#124f34;padding:12px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+button{background:#176b45;color:white;border:0;padding:12px 16px;border-radius:6px;cursor:pointer}
+nav button{background:white;color:#176b45}
+section{display:none;padding:20px;max-width:1000px;margin:auto}
+section.active{display:block}
+.hero{text-align:center;background:#e1f1e5;padding:50px 15px;border-radius:12px}
+.hero h1{color:#176b45}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px}
+.food{background:white;padding:12px;border-radius:10px;box-shadow:0 2px 7px #ddd}
+.food img{width:100%;height:150px;object-fit:cover;border-radius:8px}
+.price{color:#176b45;font-weight:bold}
+input,select,textarea{width:100%;padding:12px;margin:8px 0 15px;border:1px solid #ccc;border-radius:6px}
+.cart-item{background:white;padding:12px;margin:10px 0;border-radius:8px}
+.total{font-size:20px;font-weight:bold}
+footer{background:#124f34;color:white;text-align:center;padding:20px;margin-top:30px}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>🍽️ FINEST MEALS</h1>
+<p>Fresh, Delicious and Affordable Meals</p>
+</header>
+
+<nav>
+<button onclick="showPage('home')">Home</button>
+<button onclick="showPage('menu')">Food Menu</button>
+<button onclick="showPage('cart')">Cart (<span id="cartCount">0</span>)</button>
+<button onclick="showPage('checkout')">Checkout</button>
+</nav>
+
+<!-- HOME -->
+<section id="home" class="active">
+<div class="hero">
+<h1>Welcome to Finest Meals</h1>
+<p>Enjoy delicious meals prepared with care.</p>
+<button onclick="showPage('menu')">Order Now</button>
+</div>
+
+<h2>About Us</h2>
+<p>Finest Meals provides tasty and affordable food. Browse our menu and order your favourite meals.</p>
+
+<h2>Our Location</h2>
+<p>Marimanti, Tharaka-Nithi, Kenya</p>
+
+<h2>Contact Us</h2>
+<p>Phone: +254700000000</p>
+</section>
+
+<!-- MENU -->
+<section id="menu">
+<h2>Our Food Menu</h2>
+<div class="grid" id="foodGrid"></div>
+</section>
+
+<!-- CART -->
+<section id="cart">
+<h2>My Shopping Cart</h2>
+<div id="cartItems"></div>
+<p class="total" id="cartTotal">Total: KSh 0</p>
+<button onclick="showPage('menu')">Continue Shopping</button>
+<button onclick="showPage('checkout')">Checkout</button>
+</section>
+
+<!-- CHECKOUT -->
+<section id="checkout">
+<h2>Checkout and Payment</h2>
+<div id="checkoutSummary"></div>
+
+<form id="orderForm">
+<label>Full Name</label>
+<input id="customerName" required placeholder="Enter your name">
+
+<label>Phone Number</label>
+<input id="customerPhone" required type="tel" placeholder="07XXXXXXXX">
+
+<label>Order Type</label>
+<select id="orderType">
+<option>Delivery</option>
+<option>Collection</option>
+</select>
+
+<label>Delivery Address</label>
+<textarea id="address" placeholder="Enter your location"></textarea>
+
+<label>Payment Method</label>
+<select id="paymentMethod">
+<option>M-Pesa</option>
+<option>Cash</option>
+<option>Bank Transfer</option>
+</select>
+
+<button type="submit">Place Order on WhatsApp</button>
+</form>
+
+<p>Note: M-Pesa payments are not automatically charged or verified by this demo.</p>
+</section>
+
+<footer>
+<p>© 2026 Finest Meals. All Rights Reserved.</p>
+<p>Fresh Food | Great Taste | Best Service</p>
+</footer>
+
+<script>
+
+// CHANGE TO YOUR REAL BUSINESS WHATSAPP NUMBER
+const BUSINESS_WHATSAPP = "254700000000";
+
+const foods = [
+{id:1,name:"Mandazi",price:20,img:"https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500"},
+{id:2,name:"Coffee",price:80,img:"https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=500"},
+{id:3,name:"Githeri",price:100,img:"https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500"},
+{id:4,name:"Samosa",price:50,img:"https://images.unsplash.com/photo-1601050690117-94f5f6fa8bd7?w=500"},
+{id:5,name:"Ugali & Samaki",price:300,img:"https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500"},
+{id:6,name:"Vegetables",price:100,img:"https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500"}
+];
+
+let cart = JSON.parse(localStorage.getItem("finestCart") || "[]");
+
+function saveCart(){
+localStorage.setItem("finestCart",JSON.stringify(cart));
+updateCart();
+}
+
+function showPage(page){
+document.querySelectorAll("section").forEach(s=>s.classList.remove("active"));
+document.getElementById(page).classList.add("active");
+
+if(page==="cart") renderCart();
+if(page==="checkout") renderCheckout();
+
+window.scrollTo(0,0);
+}
+
+function renderMenu(){
+document.getElementById("foodGrid").innerHTML=foods.map(food=>`
+<div class="food">
+<img src="${food.img}" alt="${food.name}">
+<h3>${food.name}</h3>
+<p class="price">KSh ${food.price}</p>
+<button onclick="addToCart(${food.id})">Add to Cart</button>
+</div>
+`).join("");
+}
+
+function addToCart(id){
+let item=cart.find(x=>x.id===id);
+
+if(item){
+item.quantity++;
+}else{
+cart.push({id:id,quantity:1});
+}
+
+saveCart();
+alert("Food added to cart!");
+}
+
+function changeQuantity(id,amount){
+let item=cart.find(x=>x.id===id);
+if(!item)return;
+
+item.quantity+=amount;
+cart=cart.filter(x=>x.quantity>0);
+
+saveCart();
+renderCart();
+}
+
+function removeItem(id){
+cart=cart.filter(x=>x.id!==id);
+saveCart();
+renderCart();
+}
+
+function getTotal(){
+return cart.reduce((sum,item)=>{
+let food=foods.find(f=>f.id===item.id);
+return sum+(food ? food.price*item.quantity : 0);
+},0);
+}
+
+function updateCart(){
+document.getElementById("cartCount").textContent=
+cart.reduce((sum,item)=>sum+item.quantity,0);
+}
+
+function renderCart(){
+let container=document.getElementById("cartItems");
+
+if(cart.length===0){
+container.innerHTML="<p>Your cart is empty.</p>";
+}else{
+container.innerHTML=cart.map(item=>{
+let food=foods.find(f=>f.id===item.id);
+
+if(!food)return "";
+
+return `
+<div class="cart-item">
+<strong>${food.name}</strong><br>
+KSh ${food.price} × ${item.quantity}
+<p>
+<button onclick="changeQuantity(${food.id},1)">+</button>
+<button onclick="changeQuantity(${food.id},-1)">-</button>
+<button onclick="removeItem(${food.id})">Remove</button>
+</p>
+</div>
+`;
+}).join("");
+}
+
+document.getElementById("cartTotal").textContent=
+"Total: KSh "+getTotal();
+}
+
+function renderCheckout(){
+let summary=document.getElementById("checkoutSummary");
+
+if(cart.length===0){
+summary.innerHTML="<p>Your cart is empty. Please add food first.</p>";
+return;
+}
+
+summary.innerHTML=`
+<h3>Order Summary</h3>
+${cart.map(item=>{
+let food=foods.find(f=>f.id===item.id);
+return food ? `<p>${food.name} × ${item.quantity} = KSh ${food.price*item.quantity}</p>` : "";
+}).join("")}
+<p class="total">Total: KSh ${getTotal()}</p>
+`;
+}
+
+document.getElementById("orderForm").addEventListener("submit",function(e){
+e.preventDefault();
+
+if(cart.length===0){
+alert("Your cart is empty!");
+showPage("menu");
+return;
+}
+
+let name=document.getElementById("customerName").value.trim();
+let phone=document.getElementById("customerPhone").value.trim();
+let type=document.getElementById("orderType").value;
+let address=document.getElementById("address").value.trim();
+let payment=document.getElementById("paymentMethod").value;
+
+let order=cart.map(item=>{
+let food=foods.find(f=>f.id===item.id);
+return food ? `${food.name} x ${item.quantity} = KSh ${food.price*item.quantity}` : "";
+}).filter(Boolean).join("\n");
+
+let message=`NEW FINEST MEALS ORDER
+Name: ${name}
+Customer Phone: ${phone}
+Order Type: ${type}
+Address: ${address || "Not provided"}
+Payment: ${payment}
+
+ORDER:
+${order}
+
+TOTAL: KSh ${getTotal()}`;
+
+let url="https://wa.me/"+BUSINESS_WHATSAPP+"?text="+encodeURIComponent(message);
+
+window.open(url,"_blank");
+
+cart=[];
+saveCart();
+renderCheckout();
+this.reset();
+});
+
+renderMenu();
+updateCart();
+
+</script>
+
+</body>
+</html>
